@@ -4,6 +4,8 @@
 #include <iostream>
 #include <fstream>
 #include <queue>
+#include <algorithm>
+#include <vector>
 
 using namespace std;
 
@@ -16,11 +18,12 @@ struct process {
 	int io;
 };
 
-int getProcessCount(char* inputFilename);
-void executeMFQS(char* inputFilename, int processCount);
-void executeRTS(char* inputFilename);
-void executeWHS(char* inputFilename);
-void populateQueue(queue<process> processes, char* inputFilename);
+//int getProcessCount(char* inputFilename);
+void executeMFQS(queue<process> processes);
+void executeRTS();
+void executeWHS();
+queue<process> populateQueue(queue<process> processes, char* inputFilename);
+bool queueSorter(process process1, process process2);
 
 int main(int argc, char* argv[]) {
 	
@@ -29,7 +32,9 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 	
-	// Not sure if we're going to need this
+	int selectedProcess;
+	cout << "Which scheduler would you like to run?\n(1): Multi-level Feedback Scheduler(MFQS)\n(2): Real-Time Scheduler (RTS)\n(3): Windows Hybrid Scheduler (WHS)\n"; 
+	cin >> selectedProcess;
 	/*
 	int processCount = getProcessCount(argv[1]);
 	if (processCount == -1) {
@@ -37,17 +42,21 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 	*/
-	
-	int selectedProcess;
-	cout << "Which scheduler would you like to run?\n(1): Multi-level Feedback Scheduler(MFQS)\n(2): Real-Time Scheduler (RTS)\n(3): Windows Hybrid Scheduler (WHS)\n"; 
-	cin >> selectedProcess;
+	queue <process> processes;
+	processes = populateQueue(processes, argv[1]);
+	/*
+	while (!processes.empty()) {
+		cout << "Arrival: " << (processes.front()).arrival << "\n";
+		processes.pop();
+	}
+	*/
 	
 	if (selectedProcess == 1) {
-		executeMFQS(argv[1], processCount);
+		executeMFQS(processes);
 	} else if (selectedProcess == 2) {
-		executeRTS(argv[1]);
+		executeRTS();
 	} else if (selectedProcess == 3) {
-		executeWHS(argv[1]);
+		executeWHS();
 	} else {
 		fprintf(stderr, "Invalid process selected. Closing.\n");
 		exit(0);
@@ -58,24 +67,25 @@ int main(int argc, char* argv[]) {
 /**
  * Executes the MFQS process scheduler
  */
-void executeMFQS(char* inputFilename, int processCount) {
-	queue <process> processes;
-	populateQueue(processes, inputFilename);
-}
-
-// TODO
-void executeRTS(char* inputFilename) {
+void executeMFQS(queue<process> processes) {
+	int numberOfQueues;
+	//cout << "How many queues would you like?\n";
+	//cin >> numberOfQueues;
 	
 }
 
 // TODO
-void executeWHS(char* inputFilename) {
+void executeRTS() {
 	
 }
 
-/*
+// TODO
+void executeWHS() {
+	
+}
+
 int getProcessCount(char* inputFilename) {
-	int numLines;
+	int numLines = 0;
 	// Iterate through to find out how many processes exist
 	ifstream inputFile(inputFilename);
 	string dummyLine;
@@ -88,19 +98,25 @@ int getProcessCount(char* inputFilename) {
 		return -1;
 	}
 }
-*/
 
 /**
- * Populates the queue by parsing the file and creating process objects
+ * Populates the queue by parsing the file, creating process objects,
+ * sorting in a vector, then copying to a queue
  */
-void populateQueue(queue<process> processes, char* inputFilename) {
-	ifstream inputFile2(inputFilename);
-	if (inputFile2) {
+queue<process> populateQueue(queue<process> processes, char* inputFilename) {
+	ifstream inputFile(inputFilename);
+	if (inputFile) {
+		// Store processes in here for sorting
+		vector<process> processVector;
 		string line;
 		
-		while(getline(inputFile2, line)) {
+		// Get first line and do nothing with iter_swap
+		getline(inputFile, line);
+		
+		while(getline(inputFile, line)) {
 			process newProcess;
 			char* token;
+			
 			// We have to convert line into a char*
 			char* buf = strdup(line.c_str());
 			
@@ -124,15 +140,27 @@ void populateQueue(queue<process> processes, char* inputFilename) {
 				lineIterator++;
 			}
 			
-			cout << newProcess.pid << " " <<
-				newProcess.burst << " " <<
-				newProcess.arrival << " " <<
-				newProcess.priority << " " <<
-				newProcess.deadline << " " <<
-				newProcess.burst << "\n";
-			
-			processes.push(newProcess);
+			// Remove invalid queues
+			if (newProcess.pid < 0 ||
+				newProcess.burst < 0 ||
+				newProcess.arrival < 0 ||
+				newProcess.priority < 0 ||
+				newProcess.deadline < 0 ||
+				newProcess.io < 0) {}
+			else {
+				processVector.push_back(newProcess);
+			}
 		}
-		inputFile2.close();
+		inputFile.close();
+		sort(processVector.begin(), processVector.end(), queueSorter);
+		int j;
+		for (j = 0; j < processVector.size(); j++) {
+			processes.push(processVector.at(j));
+		}
+		return processes;
 	}	
+}
+
+bool queueSorter(process process1, process process2) {
+	return (process1.arrival < process2.arrival);
 }
