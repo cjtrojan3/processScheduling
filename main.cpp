@@ -6,6 +6,7 @@
 #include <queue>
 #include <algorithm>
 #include <vector>
+#include <list>
 
 using namespace std;
 
@@ -16,6 +17,16 @@ struct process {
 	int priority;
 	int deadline;
 	int io;
+	int waitTime;
+	int turnaroundTime;
+	// Used for aging
+	// int timeSentToBottom;
+};
+
+struct queueWrapper {
+	int timeQuantum;
+	queue<process> processQueue;
+	int howManyTicks;
 };
 
 //int getProcessCount(char* inputFilename);
@@ -25,7 +36,12 @@ void executeWHS();
 queue<process> populateQueue(queue<process> processes, char* inputFilename);
 bool queueSorter(process process1, process process2);
 
+int clockTick = -1;
+int whichQueue = 0;
+
 int main(int argc, char* argv[]) {
+	
+	
 	
 	if (argc != 2) {
 		fprintf(stderr, "Input filename not provided\n");
@@ -35,21 +51,9 @@ int main(int argc, char* argv[]) {
 	int selectedProcess;
 	cout << "Which scheduler would you like to run?\n(1): Multi-level Feedback Scheduler(MFQS)\n(2): Real-Time Scheduler (RTS)\n(3): Windows Hybrid Scheduler (WHS)\n"; 
 	cin >> selectedProcess;
-	/*
-	int processCount = getProcessCount(argv[1]);
-	if (processCount == -1) {
-		fprintf(stderr, "Process count failed. Closing\n");
-		exit(0);
-	}
-	*/
 	queue <process> processes;
 	processes = populateQueue(processes, argv[1]);
-	/*
-	while (!processes.empty()) {
-		cout << "Arrival: " << (processes.front()).arrival << "\n";
-		processes.pop();
-	}
-	*/
+	
 	
 	if (selectedProcess == 1) {
 		executeMFQS(processes);
@@ -69,9 +73,97 @@ int main(int argc, char* argv[]) {
  */
 void executeMFQS(queue<process> processes) {
 	int numberOfQueues;
-	//cout << "How many queues would you like?\n";
-	//cin >> numberOfQueues;
+	cout << "How many queues would you like? (Max of 5)\n";
+	cin >> numberOfQueues;
 	
+	if (numberOfQueues < 2 || numberOfQueues > 5) {
+		fprintf(stderr, "Invalid number of queues. Closing.\n");
+		exit(0);
+	}
+	
+	// TODO Possibly take in as inputFile
+	int timeQuantum = 3;
+	
+	queueWrapper *queues = new queueWrapper[numberOfQueues];
+	for (int i = 0; i < numberOfQueues; i++) {
+		queueWrapper q1;
+		if (i <= numberOfQueues - 2) {
+			q1.timeQuantum = timeQuantum;	
+			q1.howManyTicks = 0;
+		}
+		queues[i] = q1;
+		timeQuantum = timeQuantum * 2;		
+	}	
+	
+	/*
+	
+	1. increment clock tick
+	2. add process to queue with arrival = clock tick
+	2a. run process for specified time quantum
+	3. once process finishes, check if a process in a higher queue is available
+		done:
+			dequeue process
+		not done:
+			demote to lower queue
+	4. add all promoted / demoted processes to a vector and sort by pid
+	5. increment age of processes in last queue
+	6. Update active queue
+	
+	*/
+	
+	while(1) {
+		bool changingQueue = true;
+		cout << "Clocktick: " << clockTick << "\n";
+		// 1. increment clock tick
+		clockTick++;
+		
+		// 2. add process to queue with arrival time equal to clock tick
+		while(processes.front().arrival == clockTick) {
+			process p = processes.front();
+			queues[0].processQueue.push(p);
+			processes.pop();
+		}
+		
+		// 2a. run the queue
+		process current = queues[whichQueue].processQueue.front();
+		current.burst--;
+		queues[whichQueue].howManyTicks++;
+		
+		if (current.burst == 0) {
+			// process is done
+			queues[whichQueue].processQueue.pop();
+			queues[whichQueue].howManyTicks = 0;
+		}
+		else if (queues[whichQueue].howManyTicks < queues[whichQueue].timeQuantum) {
+			changingQueue = false;
+		}
+		else {
+			// check if we are in last queue
+			if (whichQueue == numberOfQueues-1) {
+				
+			} else {
+				// demote
+				queues[whichQueue].howManyTicks = 0;
+				queues[whichQueue+1].processQueue.push(current);
+				queues[whichQueue].processQueue.pop();
+			}	
+		}
+		
+		// Update the queue we are using
+		if (changingQueue) {
+			int z = 0;
+			while (z <= numberOfQueues-1 && queues[z].processQueue.size() == 0) {
+				z++;
+			}
+			if (z == numberOfQueues) {
+				// We're done.
+				cout << "Exiting program!\n";
+				exit(0);
+			} else {
+				whichQueue = z;
+			}
+		}
+	}
 }
 
 // TODO
@@ -105,6 +197,7 @@ int getProcessCount(char* inputFilename) {
  */
 queue<process> populateQueue(queue<process> processes, char* inputFilename) {
 	ifstream inputFile(inputFilename);
+		
 	if (inputFile) {
 		// Store processes in here for sorting
 		vector<process> processVector;
@@ -114,40 +207,28 @@ queue<process> populateQueue(queue<process> processes, char* inputFilename) {
 		getline(inputFile, line);
 		
 		while(getline(inputFile, line)) {
-			process newProcess;
-			char* token;
+
+			int pid, burst, arrival, priority, deadline, io;
 			
-			// We have to convert line into a char*
 			char* buf = strdup(line.c_str());
 			
-			token = strtok(buf, " ");
-			int lineIterator = 0;
-			while (token != NULL) {
-				if (lineIterator == 0) {
-					newProcess.pid = atoi(token);
-				} else if (lineIterator == 1) {
-					newProcess.burst = atoi(token);
-				} else if (lineIterator == 2) {
-					newProcess.arrival = atoi(token);
-				} else if (lineIterator == 3) {
-					newProcess.priority = atoi(token);
-				} else if (lineIterator == 4) {
-					newProcess.deadline = atoi(token);
-				} else if (lineIterator == 5) {
-					newProcess.io = atoi(token);
-				}
-				token = strtok(NULL, " ");
-				lineIterator++;
-			}
+			sscanf(buf, "%d %d %d %d %d %d", &pid, &burst, &arrival, &priority, &deadline, &io);
 			
 			// Remove invalid queues
-			if (newProcess.pid < 0 ||
-				newProcess.burst < 0 ||
-				newProcess.arrival < 0 ||
-				newProcess.priority < 0 ||
-				newProcess.deadline < 0 ||
-				newProcess.io < 0) {}
+			if (pid < 0 ||
+				burst < 0 ||
+				arrival < 0 ||
+				priority < 0 ||
+				deadline < 0 ||
+				io < 0) {}
 			else {
+				process newProcess;
+				newProcess.pid = pid;
+				newProcess.burst = burst;
+				newProcess.arrival = arrival;
+				newProcess.priority = priority;
+				newProcess.deadline = deadline;
+				newProcess.io = io;
 				processVector.push_back(newProcess);
 			}
 		}
@@ -162,5 +243,10 @@ queue<process> populateQueue(queue<process> processes, char* inputFilename) {
 }
 
 bool queueSorter(process process1, process process2) {
-	return (process1.arrival < process2.arrival);
+	if (process1.arrival == process2.arrival) {
+		return (process1.pid < process2.pid);
+	} else {
+		return (process1.arrival < process2.arrival);	
+	}
+	
 }
