@@ -1,0 +1,80 @@
+Due: November 29
+C++
+
+Sample input
+	If negative numbers appear, ignore the process - DELETE
+	100k processes
+	Be aware of the complexity of the sorting alrgorithm used
+
+Stress & Efficiecy: 	30%
+Correctness: 			35%
+Analysis: 				20%
+Specs Compliant: 		15%
+
+I/O
+	If I/O is a positive number, then it exists
+	If it's 0, then there is no I/O
+	If it's negative, throw out the process
+	Do I/O 1 clock tick before time quantum expires
+
+1. Implement MFQS
+	Prompt for number of queues
+		Usually not more than 5
+	Queues 1 - (n-1): RR
+	Queue n: FCFS
+	Time quantum for each queue below you is doubled
+	Last queue can age
+		You can only go up one queue
+	If a new process comes in when another is running it's time quantum, let it finish, then run new one
+	Tie breaker: If a process in queue n-1 is demoted to queue n at the same clock tick that a process at process n+1 is promoted ot queue n.
+		Smaller PID goes first
+2. Implement RTS
+	Earliest deadline first
+	Hard or Soft
+	Process P(i) cannot be scheduled (aborted)
+		Hard Real Time (HRT): Terminal scheduler completely
+		Soft Real Time (SRT): Report P(i), continue scheduling
+
+3. Implement WHS
+	Hardest
+	Two bands: (0-49) and (50-99) with a line between them. You cannot cross the line
+		One band is high priority. One is low priority
+	Larger number = Higher priority
+	User processes are in one band. Kernel processes are in the other
+	If you get promoted, you cannot be promoted into the next band and vice versa
+	Promotion is done in one of two times
+		You do I/O
+			Priority after coming back (base priority + time spent in I/O)
+		Aging timer expires
+			Priority after aging (base priority + 10)
+			Aging timer then resets
+	Demotion
+		A process' priority is demoted by the amount of time that is spent in the CPU
+
+4. Write paper
+	IEEE fromat
+	20% of the grade
+	5-6 pages total
+	Paper organization:
+		1. Abstract
+		2. Introcution
+			Introduce the problem
+		3. Previous work
+			Discovery - What has been done
+				MFQS, RTS, WHS
+			Justification - BUT what I am doing is different
+				"I am simulating them"
+		4. My model
+		5. Performance evaluation
+			Compare all three and tell which is best
+			Think about metrics to compare them
+			60% of the whole paper
+			Many graphs/charts
+		6. Future work
+		7. Conclusion
+
+Statistics for all algorithms
+	1. Start end time spent in the CPU
+	2. Average waiting time (AWT)
+	3. Average turnaround time (ATT)
+	4. Total number of processes scheduled (NP)
