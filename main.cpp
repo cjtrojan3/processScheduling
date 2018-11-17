@@ -35,9 +35,11 @@ void executeRTS();
 void executeWHS();
 queue<process> populateQueue(queue<process> processes, char* inputFilename);
 bool queueSorter(process process1, process process2);
+int getActiveQueue(queueWrapper queues[], int numberOfQueues);
+int getNextQueue(queueWrapper queues[], int numberOfQueues);
 
-int clockTick = -1;
-int whichQueue = 0;
+int clockTick = 0;
+process currentProcess;
 
 int main(int argc, char* argv[]) {
 	
@@ -71,7 +73,8 @@ int main(int argc, char* argv[]) {
 /**
  * Executes the MFQS process scheduler
  */
-void executeMFQS(queue<process> processes) {
+void executeMFQS(queue<process> processBacklog) {
+	/*
 	int numberOfQueues;
 	cout << "How many queues would you like? (Max of 5)\n";
 	cin >> numberOfQueues;
@@ -80,90 +83,82 @@ void executeMFQS(queue<process> processes) {
 		fprintf(stderr, "Invalid number of queues. Closing.\n");
 		exit(0);
 	}
+	*/
 	
 	// TODO Possibly take in as inputFile
-	int timeQuantum = 3;
+	int timeQuantum1 = 3;
 	
-	queueWrapper *queues = new queueWrapper[numberOfQueues];
-	for (int i = 0; i < numberOfQueues; i++) {
+	queueWrapper *queues = new queueWrapper[3];
+	for (int i = 0; i < 3; i++) {
 		queueWrapper q1;
-		if (i <= numberOfQueues - 2) {
-			q1.timeQuantum = timeQuantum;	
+		if (i <= 2 - 2) {
+			q1.timeQuantum = timeQuantum1;	
 			q1.howManyTicks = 0;
 		}
 		queues[i] = q1;
-		timeQuantum = timeQuantum * 2;		
+		timeQuantum1 = timeQuantum1 * 2;		
 	}	
 	
-	/*
-	
-	1. increment clock tick
-	2. add process to queue with arrival = clock tick
-	2a. run process for specified time quantum
-	3. once process finishes, check if a process in a higher queue is available
-		done:
-			dequeue process
-		not done:
-			demote to lower queue
-	4. add all promoted / demoted processes to a vector and sort by pid
-	5. increment age of processes in last queue
-	6. Update active queue
-	
-	*/
-	
-	while(1) {
-		bool changingQueue = true;
-		cout << "Clocktick: " << clockTick << "\n";
-		// 1. increment clock tick
+	while (true) {
+		
+		// Add all new processes
+		while (processBacklog.front().arrival == clockTick) {
+			process p = processBacklog.front();
+			queues[0].processQueue.push(p);
+			cout << "Queuing process. PID: " << p.pid << "\n";
+			processBacklog.pop();
+			cout << "Backlog size: " << processBacklog.size() << "\n";
+		}
+		
+		// Currently running queue
+		int activeQueue = getActiveQueue(queues, 3);
+		
+		// No currently running processes - Start new one
+		if (activeQueue == -1) {
+			// Get highest queued process and start running it
+			// If you came in at current clock tick, you cannot run
+			int nextQueue = getNextQueue(queues, 3);
+			// Queue empty
+			if (nextQueue == -1) {
+				if (processBacklog.size() > 0) {
+					
+				} else {
+					// We are done. Nothing else to do.
+				}
+			} else {
+				// Start new process and decrement 
+			}
+		} else {
+			// We have a currently running process
+			// Continue that process
+			queues[activeQueue].howManyTicks++;
+			queues[activeQueue].processQueue.front().burst--;
+		}
+		
+		vector<process> updateQueueVector;
+		
+		// We only check for demotion if a process ran this clock tick
+		/*
+		if (activeQueue != -1 && processBacklog.size() > 0) {
+			// Check if it's being loaded into the same queue that stuff is being promoted into
+			// If yes, add to updateQueueVector
+			// If no, just demote
+		}
+		*/
+		
+		// TODO Populate vector with aged processes
+		// TODO Sort vector
+		// 
+		
+		// Remove finished process and promote old processes
+		
+		// Regardless of what happens this clock tick, clock tick must increment
 		clockTick++;
 		
-		// 2. add process to queue with arrival time equal to clock tick
-		while(processes.front().arrival == clockTick) {
-			process p = processes.front();
-			queues[0].processQueue.push(p);
-			processes.pop();
-		}
-		
-		// 2a. run the queue
-		process current = queues[whichQueue].processQueue.front();
-		current.burst--;
-		queues[whichQueue].howManyTicks++;
-		
-		if (current.burst == 0) {
-			// process is done
-			queues[whichQueue].processQueue.pop();
-			queues[whichQueue].howManyTicks = 0;
-		}
-		else if (queues[whichQueue].howManyTicks < queues[whichQueue].timeQuantum) {
-			changingQueue = false;
-		}
-		else {
-			// check if we are in last queue
-			if (whichQueue == numberOfQueues-1) {
-				
-			} else {
-				// demote
-				queues[whichQueue].howManyTicks = 0;
-				queues[whichQueue+1].processQueue.push(current);
-				queues[whichQueue].processQueue.pop();
-			}	
-		}
-		
-		// Update the queue we are using
-		if (changingQueue) {
-			int z = 0;
-			while (z <= numberOfQueues-1 && queues[z].processQueue.size() == 0) {
-				z++;
-			}
-			if (z == numberOfQueues) {
-				// We're done.
-				cout << "Exiting program!\n";
-				exit(0);
-			} else {
-				whichQueue = z;
-			}
-		}
 	}
+	
+	
+	
 }
 
 // TODO
@@ -247,6 +242,27 @@ bool queueSorter(process process1, process process2) {
 		return (process1.pid < process2.pid);
 	} else {
 		return (process1.arrival < process2.arrival);	
+	}	
+}
+
+/**
+ * If a queue is currently running a process, return the index to that queue.
+ * If not, return -1 to know we can start at the top again.
+ */
+int getActiveQueue(queueWrapper queues[], int numberOfQueues) {
+	for (int i = 0; i < numberOfQueues; i++) {
+		if (queues[i].howManyTicks > 0) {
+			return i;
+		}
 	}
-	
+	return -1;
+}
+
+int getNextQueue(queueWrapper queues[], int numberOfQueues) {
+	for (int i = 0; i < numberOfQueues; i++) {
+		if (queues[i].processQueue.size() > 0) {
+			return i;
+		}
+	}
+	return -1;
 }
