@@ -45,8 +45,6 @@ process currentProcess;
 
 int main(int argc, char* argv[]) {
 	
-	
-	
 	if (argc != 2) {
 		fprintf(stderr, "Input filename not provided\n");
 		exit(0);
@@ -57,8 +55,7 @@ int main(int argc, char* argv[]) {
 	cin >> selectedProcess;
 	queue <process> processes;
 	processes = populateQueue(processes, argv[1]);
-	
-	
+
 	if (selectedProcess == 1) {
 		executeMFQS(processes);
 	} else if (selectedProcess == 2) {
@@ -77,6 +74,9 @@ int main(int argc, char* argv[]) {
  */
 void executeMFQS(queue<process> processBacklog) {
 	
+	unsigned long totalProcessCount = (long)processBacklog.size();
+	cout << totalProcessCount << "\n";
+	
 	int numberOfQueues;
 	cout << "How many queues would you like? (Max of 5)\n";
 	cin >> numberOfQueues;
@@ -85,14 +85,14 @@ void executeMFQS(queue<process> processBacklog) {
 	cout << "How long would you like processes to age in the last queue?\n";
 	cin >> ageTime;
 	
+	int timeQuantum1;
+	cout << "What would you like the time quantum of the first queue to be?\n";
+	cin >> timeQuantum1;
+	
 	if (numberOfQueues < 2 || numberOfQueues > 5) {
 		fprintf(stderr, "Invalid number of queues. Closing.\n");
 		exit(0);
 	}
-	
-	
-	// TODO Possibly take in as inputFile
-	int timeQuantum1 = 3;
 	
 	queueWrapper *queues = new queueWrapper[numberOfQueues];
 	for (int i = 0; i < numberOfQueues; i++) {
@@ -109,6 +109,7 @@ void executeMFQS(queue<process> processBacklog) {
 		bool activeQueueRan, nextQueueRan, alreadyPromoted;
 		activeQueueRan = nextQueueRan = alreadyPromoted = false;
 		vector<process> updateQueueVector;
+		long totalWaitTime = 0;
 		
 		// Add all new processes
 		while (processBacklog.size() > 0 && processBacklog.front().arrival == clockTick) {
@@ -143,11 +144,19 @@ void executeMFQS(queue<process> processBacklog) {
 					
 				} else {
 					cout << "All processes are done. Ending.\n";
+					cout << totalWaitTime << "\n";
+					cout << totalProcessCount << "\n";
+					cout << "Average wait time: " << (totalWaitTime / totalProcessCount) << "\n";
 					exit(0);
 				}
 			} else {
 				// Start new process and decrement
 				if (queues[nextQueue].processQueue.front().arrival < clockTick) {
+					
+					if (queues[nextQueue].processQueue.front().waitTime == -1) {
+						queues[nextQueue].processQueue.front().waitTime = clockTick-1;
+						totalWaitTime += (long)(queues[nextQueue].processQueue.front().waitTime);
+					}
 					
 					#ifdef DEBUG
 					cout << "Running process with PID: " << queues[nextQueue].processQueue.front().pid << " in queue: " << nextQueue << ".\n";
@@ -158,7 +167,7 @@ void executeMFQS(queue<process> processBacklog) {
 					queues[nextQueue].howManyTicks++;
 					queues[nextQueue].processQueue.front().burst--;
 				} else {
-					// Process arrived at this clock tick. We cannot start it.
+					// Process arrived at this clock tick. We cannot decrement its burst yet.
 				}
 			}
 		} else {
@@ -182,7 +191,7 @@ void executeMFQS(queue<process> processBacklog) {
 				#ifdef DEBUG
 				cout << "Process with PID: " << queues[demotionQueue].processQueue.front().pid << " is done.\n";
 				#endif
-			
+				queues[demotionQueue].processQueue.front().turnaroundTime = (clockTick - queues[demotionQueue].processQueue.front().waitTime);
 				queues[demotionQueue].processQueue.pop();
 				queues[demotionQueue].howManyTicks = 0;
 			} else if (queues[demotionQueue].howManyTicks < queues[demotionQueue].timeQuantum || (demotionQueue == numberOfQueues-1)){
@@ -298,6 +307,8 @@ queue<process> populateQueue(queue<process> processes, char* inputFilename) {
 				newProcess.priority = priority;
 				newProcess.deadline = deadline;
 				newProcess.io = io;
+				newProcess.waitTime = -1;
+				newProcess.turnaroundTime = -1;
 				processVector.push_back(newProcess);
 			}
 		}
