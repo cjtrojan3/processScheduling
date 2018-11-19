@@ -19,15 +19,26 @@ int main(int argc, char* argv[]) {
 	std::queue <process> processes;
 	processes = populateQueue(processes, argv[1]);
 
+	switch(selectedProcess) {
+		case 1: executeMFQS(processes);
+			break;
+		case 2: executeRTS(processes);
+			break;
+		case 3: executeWHS();
+			break;
+		default: std::cout << "Hello :)\n";
+	}
+	/*
 	if (selectedProcess == 1) {
 		executeMFQS(processes);
 	} else if (selectedProcess == 2) {
-		executeRTS();
+		executeRTS(processes);
 	} else if (selectedProcess == 3) {
 		executeWHS();
 	} else {
 		fprintf(stderr, "Invalid process selected. Closing.\n");
 		exit(0);
 	}
+	*/
 	return 0;
 }

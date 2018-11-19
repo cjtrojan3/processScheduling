@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fstream>
-
+#include <algorithm>
 #include <queue>
 #include "queueWrapper.hpp"
 
@@ -13,5 +13,5 @@ int getActiveQueue(queueWrapper queues[], int numberOfQueues);
 int getNextQueue(queueWrapper queues[], int numberOfQueues);
 bool sortByPid(process process1, process process2);
 void executeMFQS(std::queue<process> processBacklog);
-void executeRTS();
+void executeRTS(std::queue<process> processBacklog);
 void executeWHS();

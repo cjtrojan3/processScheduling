@@ -5,13 +5,10 @@
  */
 void executeMFQS(std::queue<process> processBacklog) {
 
-	unsigned long totalProcessCount = (long)processBacklog.size();
+	unsigned long long totalProcessCount = (unsigned long long)processBacklog.size();
 
-  int clockTick = 0;
+	int clockTick = 0;
 
-	#ifdef DEBUG
-	std::cout << totalProcessCount << "\n";
-	#endif
 
 	int numberOfQueues;
 	std::cout << "How many queues would you like? (Max of 5)\n";
@@ -45,7 +42,7 @@ void executeMFQS(std::queue<process> processBacklog) {
 		bool activeQueueRan, nextQueueRan, alreadyPromoted;
 		activeQueueRan = nextQueueRan = alreadyPromoted = false;
 		std::vector<process> updateQueueVector;
-		long totalWaitTime = 0;
+		unsigned long long totalWaitTime = 0;
 
 		// Add all new processes
 		while (processBacklog.size() > 0 && processBacklog.front().arrival == clockTick) {
@@ -53,7 +50,7 @@ void executeMFQS(std::queue<process> processBacklog) {
 			queues[0].processQueue.push(p);
 
 			#ifdef DEBUG
-		  std::cout << "Queuing process. PID: " << p.pid << "\n";
+			std::cout << "Queuing process. PID: " << p.pid << "\n";
 			#endif
 
 			processBacklog.pop();
@@ -91,7 +88,7 @@ void executeMFQS(std::queue<process> processBacklog) {
 
 					if (queues[nextQueue].processQueue.front().waitTime == -1) {
 						queues[nextQueue].processQueue.front().waitTime = clockTick-1;
-						totalWaitTime += (long)(queues[nextQueue].processQueue.front().waitTime);
+						totalWaitTime += (unsigned long long)(queues[nextQueue].processQueue.front().waitTime);
 					}
 
 					#ifdef DEBUG
