@@ -8,6 +8,8 @@
 #include <vector>
 #include <list>
 
+//#define DEBUG
+
 using namespace std;
 
 struct process {
@@ -19,8 +21,7 @@ struct process {
 	int io;
 	int waitTime;
 	int turnaroundTime;
-	// Used for aging
-	// int timeSentToBottom;
+	int age;
 };
 
 struct queueWrapper {
@@ -37,6 +38,7 @@ queue<process> populateQueue(queue<process> processes, char* inputFilename);
 bool queueSorter(process process1, process process2);
 int getActiveQueue(queueWrapper queues[], int numberOfQueues);
 int getNextQueue(queueWrapper queues[], int numberOfQueues);
+bool sortByPid(process process1, process process2);
 
 int clockTick = 0;
 process currentProcess;
@@ -74,91 +76,163 @@ int main(int argc, char* argv[]) {
  * Executes the MFQS process scheduler
  */
 void executeMFQS(queue<process> processBacklog) {
-	/*
+	
 	int numberOfQueues;
 	cout << "How many queues would you like? (Max of 5)\n";
 	cin >> numberOfQueues;
+	
+	int ageTime;
+	cout << "How long would you like processes to age in the last queue?\n";
+	cin >> ageTime;
 	
 	if (numberOfQueues < 2 || numberOfQueues > 5) {
 		fprintf(stderr, "Invalid number of queues. Closing.\n");
 		exit(0);
 	}
-	*/
+	
 	
 	// TODO Possibly take in as inputFile
 	int timeQuantum1 = 3;
 	
-	queueWrapper *queues = new queueWrapper[3];
-	for (int i = 0; i < 3; i++) {
+	queueWrapper *queues = new queueWrapper[numberOfQueues];
+	for (int i = 0; i < numberOfQueues; i++) {
 		queueWrapper q1;
-		if (i <= 2 - 2) {
-			q1.timeQuantum = timeQuantum1;	
-			q1.howManyTicks = 0;
-		}
+		q1.timeQuantum = timeQuantum1;	
+		q1.howManyTicks = 0;
 		queues[i] = q1;
 		timeQuantum1 = timeQuantum1 * 2;		
 	}	
 	
 	while (true) {
+		int activeQueue, nextQueue, demotionQueue;
+		activeQueue = nextQueue = demotionQueue = 0;
+		bool activeQueueRan, nextQueueRan, alreadyPromoted;
+		activeQueueRan = nextQueueRan = alreadyPromoted = false;
+		vector<process> updateQueueVector;
 		
 		// Add all new processes
-		while (processBacklog.front().arrival == clockTick) {
+		while (processBacklog.size() > 0 && processBacklog.front().arrival == clockTick) {
 			process p = processBacklog.front();
 			queues[0].processQueue.push(p);
+			
+			#ifdef DEBUG
 			cout << "Queuing process. PID: " << p.pid << "\n";
+			#endif
+			
 			processBacklog.pop();
+			
+			#ifdef DEBUG
 			cout << "Backlog size: " << processBacklog.size() << "\n";
+			#endif
 		}
 		
 		// Currently running queue
-		int activeQueue = getActiveQueue(queues, 3);
+		activeQueue = getActiveQueue(queues, numberOfQueues);
 		
 		// No currently running processes - Start new one
 		if (activeQueue == -1) {
 			// Get highest queued process and start running it
-			// If you came in at current clock tick, you cannot run
-			int nextQueue = getNextQueue(queues, 3);
+			nextQueue = getNextQueue(queues, numberOfQueues);
 			// Queue empty
 			if (nextQueue == -1) {
 				if (processBacklog.size() > 0) {
 					
+					#ifdef DEBUG
+					cout << "All queues are empty. Waiting for new ones.\n";
+					#endif
+					
 				} else {
-					// We are done. Nothing else to do.
+					cout << "All processes are done. Ending.\n";
+					exit(0);
 				}
 			} else {
-				// Start new process and decrement 
+				// Start new process and decrement
+				if (queues[nextQueue].processQueue.front().arrival < clockTick) {
+					
+					#ifdef DEBUG
+					cout << "Running process with PID: " << queues[nextQueue].processQueue.front().pid << " in queue: " << nextQueue << ".\n";
+					cout << "Process burst: " << queues[nextQueue].processQueue.front().burst << "\n";
+					#endif
+					
+					nextQueueRan = true;
+					queues[nextQueue].howManyTicks++;
+					queues[nextQueue].processQueue.front().burst--;
+				} else {
+					// Process arrived at this clock tick. We cannot start it.
+				}
 			}
 		} else {
-			// We have a currently running process
-			// Continue that process
+
+			#ifdef DEBUG
+			cout << "Running process with PID: " << queues[activeQueue].processQueue.front().pid << " in queue: " << activeQueue << ".\n";
+			cout << "Process burst: " << queues[activeQueue].processQueue.front().burst << "\n";
+			#endif
+			
+			activeQueueRan = true;
 			queues[activeQueue].howManyTicks++;
 			queues[activeQueue].processQueue.front().burst--;
 		}
 		
-		vector<process> updateQueueVector;
-		
 		// We only check for demotion if a process ran this clock tick
-		/*
-		if (activeQueue != -1 && processBacklog.size() > 0) {
-			// Check if it's being loaded into the same queue that stuff is being promoted into
-			// If yes, add to updateQueueVector
-			// If no, just demote
+		if (activeQueueRan || nextQueueRan) {
+			demotionQueue = ((activeQueue != -1) ? activeQueue : nextQueue);
+			
+			if (queues[demotionQueue].processQueue.front().burst == 0) {
+				
+				#ifdef DEBUG
+				cout << "Process with PID: " << queues[demotionQueue].processQueue.front().pid << " is done.\n";
+				#endif
+			
+				queues[demotionQueue].processQueue.pop();
+				queues[demotionQueue].howManyTicks = 0;
+			} else if (queues[demotionQueue].howManyTicks < queues[demotionQueue].timeQuantum || (demotionQueue == numberOfQueues-1)){
+				// No demotion
+			} else {
+				// We have demotion and promotion going into the same queue
+				queues[demotionQueue].howManyTicks = 0;
+				
+				if (demotionQueue == numberOfQueues - 3) {
+					alreadyPromoted = true;
+					updateQueueVector.push_back(queues[demotionQueue].processQueue.front());
+					queues[demotionQueue].processQueue.pop();
+					
+					if (queues[numberOfQueues-1].processQueue.size() > 0 && (clockTick - queues[numberOfQueues-1].processQueue.front().age >= ageTime)) {
+						updateQueueVector.push_back(queues[numberOfQueues-1].processQueue.front());
+						queues[numberOfQueues-1].processQueue.pop();
+						
+						sort(updateQueueVector.begin(), updateQueueVector.end(), sortByPid);
+						
+						for(int i=0; i <= 1; i++) {
+							queues[numberOfQueues-2].processQueue.push(updateQueueVector.front());
+							updateQueueVector.erase(updateQueueVector.begin());
+						}
+						
+					} else {
+						queues[demotionQueue + 1].processQueue.push(updateQueueVector.front());
+						updateQueueVector.erase(updateQueueVector.begin());
+					}
+				}
+				// Promote and demote independently
+				else {
+					
+					if (demotionQueue == numberOfQueues-2) {
+						queues[demotionQueue].processQueue.front().age = clockTick;
+					}
+					
+					queues[demotionQueue+1].processQueue.push(queues[demotionQueue].processQueue.front());
+					queues[demotionQueue].processQueue.pop();
+				}
+			}
 		}
-		*/
 		
-		// TODO Populate vector with aged processes
-		// TODO Sort vector
-		// 
-		
-		// Remove finished process and promote old processes
-		
-		// Regardless of what happens this clock tick, clock tick must increment
+		if (demotionQueue != numberOfQueues-1) {
+			if (!alreadyPromoted && queues[numberOfQueues-1].processQueue.size() > 0 && (clockTick - queues[numberOfQueues-1].processQueue.front().age >= ageTime)) {
+				queues[numberOfQueues-2].processQueue.push(queues[numberOfQueues-1].processQueue.front());
+				queues[numberOfQueues-1].processQueue.pop();
+			}
+		}
 		clockTick++;
-		
 	}
-	
-	
-	
 }
 
 // TODO
@@ -243,6 +317,10 @@ bool queueSorter(process process1, process process2) {
 	} else {
 		return (process1.arrival < process2.arrival);	
 	}	
+}
+
+bool sortByPid(process process1, process process2) {
+	return (process1.pid < process2.pid);		
 }
 
 /**
