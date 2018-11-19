@@ -1,4 +1,4 @@
-#include "helpers.hpp"
+#include "headers/helpers.hpp"
 
 int getProcessCount(char* inputFilename) {
 	int numLines = 0;

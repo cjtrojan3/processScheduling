@@ -2,7 +2,7 @@
 
 #include <queue>
 
-#include "helpers.hpp"
+#include "headers/helpers.hpp"
 
 int main(int argc, char* argv[]) {
 
