@@ -1,7 +1,4 @@
-//#define DEBUG
-
 #include <queue>
-
 #include "headers/helpers.hpp"
 
 int main(int argc, char* argv[]) {

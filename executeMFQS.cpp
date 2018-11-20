@@ -1,4 +1,5 @@
 #include "headers/helpers.hpp"
+#define DEBUG
 
 /**
  * Executes the MFQS process scheduler
@@ -124,6 +125,7 @@ void executeMFQS(std::queue<process> processBacklog) {
 				#ifdef DEBUG
 				std::cout << "Process with PID: " << queues[demotionQueue].processQueue.front().pid << " is done.\n";
 				#endif
+				
 				queues[demotionQueue].processQueue.front().turnaroundTime = (clockTick - queues[demotionQueue].processQueue.front().waitTime);
 				queues[demotionQueue].processQueue.pop();
 				queues[demotionQueue].howManyTicks = 0;
