@@ -1,6 +1,7 @@
 struct process {
 	int pid;
-	int burst;
+	int burst; // leave this one alone
+	int totalBurst; // decrement this one
 	int arrival;
 	int priority;
 	int deadline;

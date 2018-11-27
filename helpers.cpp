@@ -49,6 +49,7 @@ std::queue<process> populateQueue(std::queue<process> processes, char* inputFile
 				process newProcess;
 				newProcess.pid = pid;
 				newProcess.burst = burst;
+				newProcess.totalBurst = burst;
 				newProcess.arrival = arrival;
 				newProcess.priority = priority;
 				newProcess.deadline = deadline;
