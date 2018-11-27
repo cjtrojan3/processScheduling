@@ -1,5 +1,5 @@
 #include "headers/helpers.hpp"
-#define DEBUG
+// #define DEBUG
 
 /**
  * Executes the MFQS process scheduler
@@ -9,7 +9,8 @@ void executeMFQS(std::queue<process> processBacklog) {
 	unsigned long long totalProcessCount = (unsigned long long)processBacklog.size();
 
 	int clockTick = 0;
-
+	double totalWaitTime = 0;
+	double totalTurnaroundTime = 0;
 
 	int numberOfQueues;
 	std::cout << "How many queues would you like? (Max of 5)\n";
@@ -22,6 +23,7 @@ void executeMFQS(std::queue<process> processBacklog) {
 	int timeQuantum1;
 	std::cout << "What would you like the time quantum of the first queue to be?\n";
 	std::cin >> timeQuantum1;
+	std::cout << "\n";
 
 	if (numberOfQueues < 2 || numberOfQueues > 5) {
 		fprintf(stderr, "Invalid number of queues. Closing.\n");
@@ -43,7 +45,6 @@ void executeMFQS(std::queue<process> processBacklog) {
 		bool activeQueueRan, nextQueueRan, alreadyPromoted;
 		activeQueueRan = nextQueueRan = alreadyPromoted = false;
 		std::vector<process> updateQueueVector;
-		unsigned long long totalWaitTime = 0;
 
 		// Add all new processes
 		while (processBacklog.size() > 0 && processBacklog.front().arrival == clockTick) {
@@ -78,9 +79,14 @@ void executeMFQS(std::queue<process> processBacklog) {
 
 				} else {
 					std::cout << "All processes are done. Ending.\n";
-					std::cout << totalWaitTime << "\n";
-					std::cout << totalProcessCount << "\n";
-					std::cout << "Average wait time: " << (totalWaitTime / totalProcessCount) << "\n";
+					std::cout << "Total Process Count: " << totalProcessCount << "\n";
+					std::cout << "Average wait time: " << (double)(totalWaitTime / totalProcessCount) << "\n";
+					std::cout << "Average turnaround time: " << (double)(totalTurnaroundTime / totalProcessCount) << "\n";
+
+					#ifdef DEBUG
+					std::cout << "Total Wait Time: " << totalWaitTime << "\n";
+					#endif
+
 					exit(0);
 				}
 			} else {
@@ -88,8 +94,10 @@ void executeMFQS(std::queue<process> processBacklog) {
 				if (queues[nextQueue].processQueue.front().arrival < clockTick) {
 
 					if (queues[nextQueue].processQueue.front().waitTime == -1) {
-						queues[nextQueue].processQueue.front().waitTime = clockTick-1;
-						totalWaitTime += (unsigned long long)(queues[nextQueue].processQueue.front().waitTime);
+						// waitTime = clockTick - arrival
+						queues[nextQueue].processQueue.front().waitTime = clockTick - queues[nextQueue].processQueue.front().arrival;
+						totalWaitTime += (double)(queues[nextQueue].processQueue.front().waitTime);
+						queues[nextQueue].processQueue.front().startTime = clockTick;
 					}
 
 					#ifdef DEBUG
@@ -122,11 +130,17 @@ void executeMFQS(std::queue<process> processBacklog) {
 
 			if (queues[demotionQueue].processQueue.front().burst == 0) {
 
+				queues[demotionQueue].processQueue.front().endTime = clockTick;
+				// turnaround = endtime - startTime
+				queues[demotionQueue].processQueue.front().turnaroundTime = (queues[demotionQueue].processQueue.front().endTime - queues[demotionQueue].processQueue.front().startTime);
+				totalTurnaroundTime += queues[demotionQueue].processQueue.front().turnaroundTime;
+
 				#ifdef DEBUG
 				std::cout << "Process with PID: " << queues[demotionQueue].processQueue.front().pid << " is done.\n";
+				std::cout << "Process with PID: " << queues[demotionQueue].processQueue.front().pid << "\'s wait time is: " << queues[demotionQueue].processQueue.front().waitTime << "\n";
+				std::cout << "Process with PID: " << queues[demotionQueue].processQueue.front().pid << "\'s turnaround time is: " << queues[demotionQueue].processQueue.front().turnaroundTime << "\n";
 				#endif
-				
-				queues[demotionQueue].processQueue.front().turnaroundTime = (clockTick - queues[demotionQueue].processQueue.front().waitTime);
+
 				queues[demotionQueue].processQueue.pop();
 				queues[demotionQueue].howManyTicks = 0;
 			} else if (queues[demotionQueue].howManyTicks < queues[demotionQueue].timeQuantum || (demotionQueue == numberOfQueues-1)){

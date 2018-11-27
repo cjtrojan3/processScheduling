@@ -8,4 +8,6 @@ struct process {
 	int waitTime;
 	int turnaroundTime;
 	int age;
+	int startTime;
+	int endTime;
 };
