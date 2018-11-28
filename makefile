@@ -1,19 +1,19 @@
-all: helpers executeMFQS executeRTS executeWHS main
+all: helpers.o executeMFQS.o executeRTS.o executeWHS.o main.o
 	g++ -std=c++11 -o run helpers.o executeMFQS.o executeRTS.o executeWHS.o main.o
 
-helpers: helpers.cpp
+helpers.o: helpers.cpp
 	g++ -std=c++11 -c helpers.cpp
 
-executeMFQS: executeMFQS.cpp
+executeMFQS.o: executeMFQS.cpp
 	g++ -std=c++11 -c executeMFQS.cpp
 
-executeRTS: executeRTS.cpp
+executeRTS.o: executeRTS.cpp
 	g++ -std=c++11 -c executeRTS.cpp
 
-executeWHS: executeWHS.cpp
+executeWHS.o: executeWHS.cpp
 	g++ -std=c++11 -c executeWHS.cpp
 
-main: main.cpp
+main.o: main.cpp
 	g++ -std=c++11 -c main.cpp
 
 clean:
