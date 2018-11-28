@@ -43,8 +43,10 @@ void executeMFQS(std::queue<process> processBacklog) {
 	while (true) {
 		int activeQueue, nextQueue, demotionQueue;
 		activeQueue = nextQueue = demotionQueue = 0;
+
 		bool activeQueueRan, nextQueueRan, alreadyPromoted;
 		activeQueueRan = nextQueueRan = alreadyPromoted = false;
+
 		std::vector<process> updateQueueVector;
 
 		// Add all new processes
@@ -72,6 +74,7 @@ void executeMFQS(std::queue<process> processBacklog) {
 			nextQueue = getNextQueue(queues, numberOfQueues);
 			// Queue empty
 			if (nextQueue == -1) {
+
 				if (processBacklog.size() > 0) {
 
 					#ifdef DEBUG
@@ -91,6 +94,7 @@ void executeMFQS(std::queue<process> processBacklog) {
 
 					exit(0);
 				}
+
 			} else {
 				// Start new process and decrement
 				if (queues[nextQueue].processQueue.front().arrival < clockTick) {
@@ -130,7 +134,6 @@ void executeMFQS(std::queue<process> processBacklog) {
 			if (queues[demotionQueue].processQueue.front().burst == 0) {
 
 				// get a reference for easier readability
-
 				auto item = queues[demotionQueue].processQueue.front();
 
 				item.endTime = clockTick;

@@ -18,7 +18,7 @@ void executeRTS(std::queue<process> processBacklog) {
 	double totalWaitTime = 0;
 	double totalTurnaroundTime = 0;
 
-	int hardOrSoft ; // 0 for hard 1 for soft
+	int hardOrSoft; // 0 for hard 1 for soft
 	std::cout << "(0)Hard or (1)Soft?\n";
 	std::cin >> hardOrSoft;
 
@@ -69,6 +69,7 @@ void executeRTS(std::queue<process> processBacklog) {
 				#ifdef DEBUG
 				std::cout << "Process with PID: " << q1.top().pid << " is done.\n";
 				#endif
+				
 				const_cast<process&>(q1.top()).endTime = clockTick;
 				const_cast<process&>(q1.top()).turnaroundTime = q1.top().endTime - q1.top().arrival;
 				const_cast<process&>(q1.top()).waitTime = q1.top().turnaroundTime - q1.top().totalBurst;
