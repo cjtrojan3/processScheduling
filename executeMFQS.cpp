@@ -1,5 +1,6 @@
 #include "headers/helpers.hpp"
 // #define DEBUG
+#define STATS
 
 /**
  * Executes the MFQS process scheduler
@@ -78,6 +79,7 @@ void executeMFQS(std::queue<process> processBacklog) {
 					#endif
 
 				} else {
+					std::cout << std::endl;
 					std::cout << "All processes are done. Ending.\n";
 					std::cout << "Total Process Count: " << totalProcessCount << "\n";
 					std::cout << "Average wait time: " << (double)(totalWaitTime / totalProcessCount) << "\n";
@@ -94,9 +96,6 @@ void executeMFQS(std::queue<process> processBacklog) {
 				if (queues[nextQueue].processQueue.front().arrival < clockTick) {
 
 					if (queues[nextQueue].processQueue.front().waitTime == -1) {
-						// waitTime = clockTick - arrival
-						queues[nextQueue].processQueue.front().waitTime = clockTick - queues[nextQueue].processQueue.front().arrival;
-						totalWaitTime += (double)(queues[nextQueue].processQueue.front().waitTime);
 						queues[nextQueue].processQueue.front().startTime = clockTick;
 					}
 
@@ -130,13 +129,24 @@ void executeMFQS(std::queue<process> processBacklog) {
 
 			if (queues[demotionQueue].processQueue.front().burst == 0) {
 
-				queues[demotionQueue].processQueue.front().endTime = clockTick;
-				// turnaround = endtime - startTime
-				queues[demotionQueue].processQueue.front().turnaroundTime = (queues[demotionQueue].processQueue.front().endTime - queues[demotionQueue].processQueue.front().startTime);
-				totalTurnaroundTime += queues[demotionQueue].processQueue.front().turnaroundTime;
+				// get a reference for easier readability
+
+				auto item = queues[demotionQueue].processQueue.front();
+
+				item.endTime = clockTick;
+				item.turnaroundTime = (item.endTime - item.arrival);
+				totalTurnaroundTime += item.turnaroundTime;
+				item.waitTime = (item.turnaroundTime - item.totalBurst);
+				totalWaitTime += item.waitTime;
+
+				// set the queues front equal to our reference we just made
+				queues[demotionQueue].processQueue.front() = item;
 
 				#ifdef DEBUG
 				std::cout << "Process with PID: " << queues[demotionQueue].processQueue.front().pid << " is done.\n";
+				#endif
+
+				#ifdef STATS
 				std::cout << "Process with PID: " << queues[demotionQueue].processQueue.front().pid << "\'s wait time is: " << queues[demotionQueue].processQueue.front().waitTime << "\n";
 				std::cout << "Process with PID: " << queues[demotionQueue].processQueue.front().pid << "\'s turnaround time is: " << queues[demotionQueue].processQueue.front().turnaroundTime << "\n";
 				#endif
