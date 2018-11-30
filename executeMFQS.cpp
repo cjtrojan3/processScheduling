@@ -1,6 +1,6 @@
 #include "headers/helpers.hpp"
 // #define DEBUG
-#define STATS
+// #define STATS
 
 /**
  * Executes the MFQS process scheduler
@@ -83,8 +83,11 @@ void executeMFQS(std::queue<process> processBacklog) {
 
 				} else {
 					std::cout << std::endl;
-					std::cout << "All processes are done. Ending.\n";
+					std::cout << "=========================================" << std::endl;
+					std::cout << "              Statistics                 " << std::endl;
+					std::cout << "=========================================\n" << std::endl;
 					std::cout << "Total Process Count: " << totalProcessCount << "\n";
+					std::cout << "Total Clock Ticks: " << clockTick << "\n";
 					std::cout << "Average wait time: " << (double)(totalWaitTime / totalProcessCount) << "\n";
 					std::cout << "Average turnaround time: " << (double)(totalTurnaroundTime / totalProcessCount) << "\n";
 
