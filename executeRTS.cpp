@@ -1,11 +1,12 @@
 #include "headers/helpers.hpp"
 #include <queue>
-#define DEBUG
-#define STATS
+// #define DEBUG
+// #define STATS
 
 void executeRTS(std::queue<process> processBacklog) {
 
 	unsigned long long totalProcessCount = (unsigned long long)processBacklog.size();
+	int totalDroppedProcesses = 0;
 
 
 	auto compare = [](const process& lhs, const process& rhs) {
@@ -51,13 +52,12 @@ void executeRTS(std::queue<process> processBacklog) {
 					#ifdef DEBUG
 					std::cout << "Cannot schedule process with PID: " << q1.top().pid << ". Removing it.\n";
 					#endif
+					totalDroppedProcesses++;
 
 					q1.pop();
 				} else {
 
-					#ifdef DEBUG
-					std::cout << "We cannot schedule this process. Ending.";
-					#endif
+					std::cout << "A Process cannot be scheduled. Ending.";
 
 					exit(0);
 				}
@@ -69,7 +69,7 @@ void executeRTS(std::queue<process> processBacklog) {
 				#ifdef DEBUG
 				std::cout << "Process with PID: " << q1.top().pid << " is done.\n";
 				#endif
-				
+
 				const_cast<process&>(q1.top()).endTime = clockTick;
 				const_cast<process&>(q1.top()).turnaroundTime = q1.top().endTime - q1.top().arrival;
 				const_cast<process&>(q1.top()).waitTime = q1.top().turnaroundTime - q1.top().totalBurst;
@@ -90,11 +90,15 @@ void executeRTS(std::queue<process> processBacklog) {
 				q1.pop();
 			}
 		} else if (processBacklog.size() == 0) {
-			std::cout << "All processes are done. Ending.\n\n";
+			std::cout << std::endl;
+			std::cout << "=========================================" << std::endl;
+			std::cout << "              Statistics                 " << std::endl;
+			std::cout << "=========================================\n" << std::endl;
 			std::cout << "Total Process Count: " << totalProcessCount << "\n";
+			std::cout << "Total number of procsses that finished: " << totalProcessCount - totalDroppedProcesses << "\n";
+			std::cout << "Total Clock Ticks: " << clockTick << "\n";
 			std::cout << "Average wait time: " << (double)(totalWaitTime / totalProcessCount) << "\n";
-			std::cout << "Average turnaround time: " << (double)(totalTurnaroundTime / totalProcessCount) << "\n";
-			exit(0);
+			std::cout << "Average turnaround time: " << (double)(totalTurnaroundTime / totalProcessCount) << "\n";			exit(0);
 		}
 		clockTick++;
 	}
