@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 			break;
 		case 2: executeRTS(processes);
 			break;
-		case 3: executeWHS();
+		case 3: executeWHS(processes);
 			break;
 		default: std::cout << "Hello :)\n";
 	}

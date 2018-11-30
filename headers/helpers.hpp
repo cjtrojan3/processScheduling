@@ -14,4 +14,4 @@ int getNextQueue(queueWrapper queues[], int numberOfQueues);
 bool sortByPid(process process1, process process2);
 void executeMFQS(std::queue<process> processBacklog);
 void executeRTS(std::queue<process> processBacklog);
-void executeWHS();
+void executeWHS(std::queue<process> processBacklog);
