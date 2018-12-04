@@ -1,15 +1,12 @@
 #include "headers/helpers.hpp"
 #include <queue>
-#define DEBUG
-#define STATS
+// #define DEBUG
+// #define STATS
 
 int clockTick;
 
 void executeWHS(std::queue<process> processBacklog) {
-	
-	// TODO Add fields to process
-	// Time spent in I/O - Initialized to 0
-	
+
 	auto compare = [](const process& lhs, const process& rhs) {
        return (lhs.io - lhs.ioAge) > (rhs.io - rhs.ioAge);
 	};
@@ -18,15 +15,16 @@ void executeWHS(std::queue<process> processBacklog) {
 	// Ones at the front with an I/O timer of 0 are done in I/O
 	std::priority_queue<process, std::vector<process>, decltype(compare)> ioQueue(compare);
 	clockTick = 0;
-	//double totalWaitTime = 0;
-	//double totalTurnaroundTime = 0;
+	double totalWaitTime = 0;
+	double totalTurnaroundTime = 0;
 	int timeQuantum1;
 	int currentProcessIndex;
+	int totalProcessCount = processBacklog.size();
 	std::vector<process> updateIOVector;
-	
+
 	std::cout << "Please enter the time quantum for each queue.\n";
 	std::cin >> timeQuantum1;
-	
+
 	queueWrapper *queues = new queueWrapper[100];
 	for (int h = 0; h <= 99; h++) {
 		queueWrapper q1;
@@ -34,7 +32,7 @@ void executeWHS(std::queue<process> processBacklog) {
 		q1.howManyTicks = 0;
 		queues[h] = q1;
 	}
-	
+
 	while (true) {
 		// Get a reference to the process that will run on this clock tick
 		currentProcessIndex = -1;
@@ -56,7 +54,7 @@ void executeWHS(std::queue<process> processBacklog) {
 				j--;
 			}
 		}
-		
+
 		// Read in new processes
 		if (processBacklog.size() > 0) {
 			while (processBacklog.size() > 0 && processBacklog.front().arrival == clockTick) {
@@ -77,7 +75,7 @@ void executeWHS(std::queue<process> processBacklog) {
 				std::cout << "Backlog size: " << processBacklog.size() << "\n";
 				#endif
 			}
-		} 
+		}
 		// Check to see if there are any more processes to run
 		else {
 			bool done = true;
@@ -87,11 +85,18 @@ void executeWHS(std::queue<process> processBacklog) {
 				}
 			}
 			if (done && ioQueue.size() == 0) {
-				std::cout << "We are done\n";
+				std::cout << std::endl;
+				std::cout << "=========================================" << std::endl;
+				std::cout << "              Statistics                 " << std::endl;
+				std::cout << "=========================================\n" << std::endl;
+				std::cout << "Total Process Count: " << totalProcessCount << "\n";
+				std::cout << "Total Clock Ticks: " << clockTick << "\n";
+				std::cout << "Average wait time: " << (double)(totalWaitTime / totalProcessCount) << "\n";
+				std::cout << "Average turnaround time: " << (double)(totalTurnaroundTime / totalProcessCount) << "\n";
 				exit(0);
 			}
 		}
-		
+
 		// Age processes in I/O
 		if (ioQueue.size() > 0) {
 			#ifdef DEBUG
@@ -107,7 +112,7 @@ void executeWHS(std::queue<process> processBacklog) {
 				updateIOVector.push_back(p);
 				ioQueue.pop();
 			}
-			
+
 			// Put them all back into the ioQueue
 			while (updateIOVector.size() > 0) {
 				#ifdef DEBUG
@@ -117,8 +122,8 @@ void executeWHS(std::queue<process> processBacklog) {
 				updateIOVector.pop_back();
 			}
 		}
-		
-		
+
+
 		// Move processes from I/O that are done back into ready queues (with promotion)
 		while (ioQueue.size() > 0 && (ioQueue.top().io - ioQueue.top().ioAge == 0)) {
 			process p1 = ioQueue.top();
@@ -128,7 +133,7 @@ void executeWHS(std::queue<process> processBacklog) {
 				// No longer aging
 				if (p1.priority + p1.io >= 10) {
 					p1.age = 0;
-				} 
+				}
 				// Negates the "waiting" it did in IO
 				else {
 					p1.age -= p1.io;
@@ -142,7 +147,7 @@ void executeWHS(std::queue<process> processBacklog) {
 				#endif
 				p1.priority = 49;
 				queues[49].processQueue.push(p1);
-			} 
+			}
 			// Cannot promote over 99
 			else if ((p1.priority <= 99 && p1.priority >= 50) && p1.priority + p1.io >= 99) {
 				#ifdef DEBUG
@@ -150,7 +155,7 @@ void executeWHS(std::queue<process> processBacklog) {
 				#endif
 				p1.priority = 99;
 				queues[99].processQueue.push(p1);
-			} 
+			}
 			// Regular promotion
 			else {
 				#ifdef DEBUG
@@ -158,12 +163,12 @@ void executeWHS(std::queue<process> processBacklog) {
 				#endif
 				p1.priority = (p1.priority + p1.io);
 				queues[p1.priority].processQueue.push(p1);
-				
+
 			}
 			ioQueue.pop();
 		}
-		
-		
+
+
 		// Promote bottom ten queues (process queue number + 10)
 		for (int k = 0; k <= 9; k++) {
 			// If a process has been in one of the bottom queues for 100 clock ticks, promote it
@@ -179,7 +184,7 @@ void executeWHS(std::queue<process> processBacklog) {
 		}
 		#ifdef DEBUG
 		if (currentProcessIndex > -1) {
-			std::cout << "Current active queue: " << currentProcessIndex << "\n";	
+			std::cout << "Current active queue: " << currentProcessIndex << "\n";
 		}
 		#endif
 
@@ -190,17 +195,28 @@ void executeWHS(std::queue<process> processBacklog) {
 			#ifdef DEBUG
 			std::cout << "Process: " << queues[currentProcessIndex].processQueue.front().pid << " burst is now: " << queues[currentProcessIndex].processQueue.front().totalBurst << "\n";
 			#endif
-			
+
 			// Process is done
 			if (queues[currentProcessIndex].processQueue.front().totalBurst == 0) {
 				// TODO Gather stats
-				queues[currentProcessIndex].processQueue.pop();
+				queues[currentProcessIndex].processQueue.front().endTime = clockTick;
+				queues[currentProcessIndex].processQueue.front().turnaroundTime = queues[currentProcessIndex].processQueue.front().endTime - queues[currentProcessIndex].processQueue.front().arrival;
+				queues[currentProcessIndex].processQueue.front().waitTime = queues[currentProcessIndex].processQueue.front().turnaroundTime - queues[currentProcessIndex].processQueue.front().burst;
+				totalWaitTime += queues[currentProcessIndex].processQueue.front().waitTime;
+				totalTurnaroundTime += queues[currentProcessIndex].processQueue.front().turnaroundTime;
 				queues[currentProcessIndex].howManyTicks = 0;
 				#ifdef DEBUG
 				std::cout << "Process: " << queues[currentProcessIndex].processQueue.front().pid << " just finished.\n";
 				#endif
+
+				#ifdef STATS
+				std::cout << "Process with PID: " << queues[currentProcessIndex].processQueue.front().pid << "\'s wait time is: " << queues[currentProcessIndex].processQueue.front().waitTime << "\n";
+				std::cout << "Process with PID: " << queues[currentProcessIndex].processQueue.front().pid << "\'s turnaround time is: " << queues[currentProcessIndex].processQueue.front().turnaroundTime << "\n";
+				#endif
+
+				queues[currentProcessIndex].processQueue.pop();
 			}
-			
+
 			// There is IO and we are at timeQuantum-1 (Send to IO)
 			else if (queues[currentProcessIndex].processQueue.front().io > 0 && (queues[currentProcessIndex].howManyTicks == timeQuantum1-1)) {
 				// Reset the queue
@@ -211,8 +227,8 @@ void executeWHS(std::queue<process> processBacklog) {
 				std::cout << "Process: " << queues[currentProcessIndex].processQueue.front().pid << " is going to IO\n";
 				#endif
 				queues[currentProcessIndex].processQueue.pop();
-			} 
-			
+			}
+
 			// Time quantum is up. Demote
 			else if (queues[currentProcessIndex].howManyTicks == timeQuantum1) {
 				queues[currentProcessIndex].howManyTicks = 0;
@@ -232,7 +248,7 @@ void executeWHS(std::queue<process> processBacklog) {
 						queues[currentProcessIndex].processQueue.front().priority = 0;
 						queues[0].processQueue.push(queues[currentProcessIndex].processQueue.front());
 						queues[currentProcessIndex].processQueue.pop();
-						
+
 						if (queues[currentProcessIndex].processQueue.front().priority <= 9) {
 							queues[currentProcessIndex].processQueue.front().age = clockTick;
 						}
@@ -250,14 +266,14 @@ void executeWHS(std::queue<process> processBacklog) {
 						queues[currentProcessIndex].processQueue.front().priority = queues[currentProcessIndex].processQueue.front().priority - timeQuantum1;
 						queues[currentProcessIndex-timeQuantum1].processQueue.push(queues[currentProcessIndex].processQueue.front());
 						queues[currentProcessIndex].processQueue.pop();
-						
+
 						if (queues[currentProcessIndex].processQueue.front().priority <= 9) {
 							queues[currentProcessIndex].processQueue.front().age = clockTick;
 						}
 					}
 				}
-				
-				
+
+
 			}
 		}
 		clockTick++;
